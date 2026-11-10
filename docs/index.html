@@ -622,6 +622,9 @@ function render() {
       </div>`;
     if (o.text) {
       const ti = el.querySelector('[data-role="text"]');
+      // Клик/постановка фокуса в поле не должны переключать саму опцию
+      ti.addEventListener("click", ev => ev.stopPropagation());
+      ti.addEventListener("pointerdown", ev => ev.stopPropagation());
       ti.addEventListener("input", () => { o.value = ti.value; generate(); });
     }
     if (o.sub) {
