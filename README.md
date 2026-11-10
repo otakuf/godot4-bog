@@ -86,13 +86,19 @@ root /path/to/public;
 index index.html;
 
 # или для быстрой проверки
-python3 -m http.server -d public 8080
+python3 -m http.server -d docs 8080
 ```
+
+## GitHub Pages
+
+Сайт лежит в каталоге `docs/` — в настройках репозитория
+(Settings → Pages → Source: «Deploy from a branch», ветка `main`, папка
+`/docs`) он публикуется как GitHub Pages без дополнительных шагов.
 
 ## Структура проекта
 
 ```
-public/
+docs/
 └── index.html   # страница-генератор (HTML + CSS + JS в одном файле)
 ```
 
