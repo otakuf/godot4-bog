@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot build options generator</title>
+<style>
+  /* ===== Material Design 3 — dark color scheme (seed: Godot blue) ===== */
+  :root {
+    --md-primary: #82c7ff;
+    --md-on-primary: #00325a;
+    --md-primary-container: #00497d;
+    --md-on-primary-container: #cfe5ff;
+    --md-secondary: #b6c8dd;
+    --md-secondary-container: #33485f;
+    --md-on-secondary-container: #d2e4f8;
+    --md-tertiary: #5edbc3;
+    --md-on-tertiary: #00382e;
+    --md-tertiary-container: #18523f; /* tonal "enabled" card */
+    --md-on-tertiary-container: #7cf4dd;
+    --md-surface: #10171f;
+    --md-surface-container-lowest: #0b1219;
+    --md-surface-container: #1a222c;
+    --md-surface-container-high: #252d37;
+    --md-on-surface: #e1e3e6;
+    --md-on-surface-variant: #c3c7cf;
+    --md-outline: #8c9199;
+    --md-outline-variant: #41484f;
+    --md-error: #ffb4ab;
+    --md-scrim: rgba(0,0,0,.55);
+    /* M3 shape tokens */
+    --sh-s: 8px; --sh-m: 12px; --sh-l: 16px; --sh-xl: 28px; --sh-full: 999px;
+    /* M3 elevation (dark) */
+    --el-1: 0 1px 2px rgba(0,0,0,.55), 0 1px 3px 1px rgba(0,0,0,.35);
+    --el-2: 0 1px 2px rgba(0,0,0,.55), 0 2px 6px 2px rgba(0,0,0,.35);
+    --el-3: 0 4px 8px 3px rgba(0,0,0,.30), 0 1px 3px rgba(0,0,0,.45);
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-font-smoothing: antialiased; }
+
+  body {
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+    font: 15px/1.6 Roboto, "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ===== Top app bar ===== */
+  .topbar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px;
+    margin-bottom: 2rem;
+    background: var(--md-surface-container);
+    border-radius: var(--sh-xl);
+    box-shadow: var(--el-1);
+    position: relative;
+  }
+  .topbar .dot-logo {
+    width: 44px; height: 44px; border-radius: var(--sh-m);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1.2rem;
+  }
+  .topbar span#t-subtitle { color: var(--md-on-surface-variant); font-size: 0.9rem; }
+
+  /* ===== Segmented button (lang switch) ===== */
+  .lang-switch {
+    margin-left: auto;
+    display: flex;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--sh-full);
+    overflow: hidden;
+    background: transparent;
+  }
+  .lang-switch button {
+    border: none; background: transparent;
+    color: var(--md-on-surface-variant);
+    font: inherit; font-size: 0.88rem; font-weight: 500;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+    display: flex; align-items: center; gap: 7px;
+    position: relative; overflow: hidden;
+  }
+  .lang-switch button + button { border-left: 1px solid var(--md-outline-variant); }
+  .lang-switch button.active {
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+  }
+  .lang-switch .flag { font-size: 1rem; line-height: 1; }
+
+  /* ===== Typography ===== */
+  h1 {
+    font-size: 1.9rem; font-weight: 400; line-height: 1.25;
+    letter-spacing: 0; margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-size: 1.05rem; font-weight: 500;
+    letter-spacing: 0.01em;
+    margin: 2rem 0 1rem;
+    color: var(--md-primary);
+  }
+  h2 code { color: inherit; }
+
+  code {
+    background: var(--md-surface-container);
+    border: none;
+    border-radius: 6px;
+    padding: 0.12em 0.45em;
+    font-size: 0.88em;
+    font-family: Roboto Mono, ui-monospace, Consolas, monospace;
+    color: var(--md-on-surface-variant);
+  }
+
+  a { color: var(--md-primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .note { color: var(--md-on-surface-variant); font-size: 0.92rem; margin: 0.4rem 0 0.8rem; }
+  .note strong { color: var(--md-on-surface); }
+  .intro { margin-bottom: 1.2rem; color: var(--md-on-surface-variant); }
+  .intro code { color: var(--md-on-surface); }
+
+  /* ===== Layout ===== */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ===== Search bar ===== */
+  .toolbar {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 1.1rem;
+  }
+  .toolbar input[type="search"] {
+    flex: 1; min-width: 200px;
+    background: var(--md-surface-container-high);
+    border: 1px solid transparent;
+    color: var(--md-on-surface);
+    border-radius: var(--sh-full);
+    padding: 0.62rem 1.1rem;
+    font: inherit;
+    outline: none;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+  .toolbar input[type="search"]:hover { background: #2e3641; }
+  .toolbar input[type="search"]:focus { border-color: var(--md-primary); background: var(--md-surface-container); }
+  .toolbar input[type="search"]::placeholder { color: var(--md-on-surface-variant); }
+
+  .toolbar .mini {
+    background: transparent;
+    border: 1px solid var(--md-outline-variant);
+    color: var(--md-primary);
+    border-radius: var(--sh-full);
+    padding: 0.55rem 1rem;
+    font: inherit; font-size: 0.85rem; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s var(--ease);
+    position: relative; overflow: hidden;
+  }
+  .toolbar .mini:hover { background: rgba(130, 199, 255, 0.08); }
+  .counter { color: var(--md-on-surface-variant); font-size: 0.85rem; }
+
+  /* ===== Option cards (filled card + M3 switch) ===== */
+  .options-list {
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 620px; overflow-y: auto;
+    padding: 4px 8px 4px 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--md-outline-variant) transparent;
+  }
+
+  .opt {
+    flex-shrink: 0;
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--md-surface-container);
+    border: 1px solid transparent;
+    border-radius: var(--sh-m);
+    padding: 0.85rem 1.1rem;
+    cursor: pointer;
+    transition: background 0.2s var(--ease), border-color 0.2s, box-shadow 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .opt:hover { background: var(--md-surface-container-high); box-shadow: var(--el-1); }
+  .opt.on { background: var(--md-tertiary-container); }
+  .opt.on .opt-name { color: var(--md-on-tertiary-container); }
+  .opt.on .opt-desc { color: var(--md-on-tertiary-container); opacity: 0.75; }
+
+  .opt input[type="checkbox"] { display: none; }
+
+  /* M3 Switch */
+  .toggle {
+    flex: none;
+    width: 52px; height: 32px; margin-top: 2px;
+    border-radius: var(--sh-full);
+    border: 2px solid var(--md-outline);
+    background: var(--md-surface-container-lowest);
+    position: relative;
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+  }
+  .toggle::after {
+    content: "";
+    position: absolute; top: 50%; left: 4px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--md-outline);
+    transform: translateY(-50%);
+    transition: transform 0.2s var(--ease), background 0.2s var(--ease), width 0.2s var(--ease), height 0.2s var(--ease);
+  }
+  .opt:hover .toggle::after { width: 18px; height: 18px; }
+  .opt.on .toggle { background: var(--md-primary); border-color: var(--md-primary); }
+  .opt.on .toggle::after { transform: translate(16px, -50%); background: var(--md-on-primary); width: 24px; height: 24px; left: 2px; }
+
+  .opt-body { min-width: 0; }
+  .opt-name { font-weight: 500; word-break: break-word; }
+  .opt-name .tag {
+    font-size: 0.68rem; font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--md-primary);
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--sh-full);
+    padding: 0.1rem 0.55rem;
+    margin-left: 8px; vertical-align: 1px;
+    background: transparent;
+  }
+  .opt-desc { color: var(--md-on-surface-variant); font-size: 0.85rem; margin-top: 3px; }
+
+  .opt-extra { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .opt-extra input[type="text"] {
+    background: var(--md-surface-container-lowest);
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 8px 8px 4px 4px;
+    color: var(--md-on-surface);
+    padding: 0.5rem 0.8rem;
+    font: inherit; font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .opt-extra input[type="text"]:focus { border-color: var(--md-primary); }
+  .subopt {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--md-on-surface-variant); font-size: 0.85rem; cursor: pointer;
+  }
+  .subopt input {
+    appearance: none;
+    width: 18px; height: 18px;
+    border: 2px solid var(--md-outline);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    flex: none;
+  }
+  .subopt input:checked {
+    background: var(--md-primary); border-color: var(--md-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300325a'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E");
+    background-size: 14px;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* ===== Preview pane ===== */
+  .preview { position: sticky; top: 1.5rem; }
+  .preview h2 { margin-top: 0; }
+  .code-wrap {
+    background: var(--md-surface-container-lowest);
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--sh-m);
+    overflow: hidden;
+    box-shadow: var(--el-1);
+  }
+  .code-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--md-outline-variant);
+    background: var(--md-surface-container);
+    font-size: 0.8rem; color: var(--md-on-surface-variant);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  textarea {
+    width: 100%; height: 560px;
+    background: transparent;
+    border: none; outline: none; resize: none;
+    color: var(--md-primary);
+    font: 13px/1.6 Roboto Mono, ui-monospace, "Cascadia Code", Consolas, monospace;
+    padding: 1rem 1.1rem;
+    white-space: pre;
+  }
+
+  /* ===== Buttons (Filled / Outlined) ===== */
+  .actions { display: flex; gap: 12px; margin-top: 1.1rem; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 150px;
+    border: none; border-radius: var(--sh-full);
+    padding: 0.72rem 1.4rem;
+    font: inherit; font-weight: 500; font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: box-shadow 0.2s var(--ease), background 0.2s var(--ease), transform 0.1s;
+    position: relative; overflow: hidden;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+  }
+  .btn-primary:hover { box-shadow: var(--el-2); }
+  .btn-primary:disabled { background: rgba(230, 224, 233, 0.12); color: rgba(230, 224, 233, 0.38); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--md-primary);
+    border: 1px solid var(--md-outline);
+  }
+  .btn-ghost:hover { background: rgba(130, 199, 255, 0.08); }
+
+  /* ===== Ripple ===== */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    background: currentColor;
+    opacity: 0.14;
+    transform: scale(0);
+    animation: ripple 0.55s var(--ease) forwards;
+  }
+  @keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+  footer { margin-top: 3.5rem; text-align: center; color: var(--md-on-surface-variant); font-size: 0.88rem; }
+
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <div class="dot-logo">G</div>
+    <span id="t-subtitle"></span>
+    <div class="lang-switch" id="lang-switch">
+      <button data-lang="en" id="btn-en"><span class="flag">🇬🇧</span>EN</button>
+      <button data-lang="ru" id="btn-ru"><span class="flag">🇷🇺</span>RU</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="options">
+      <h1 id="t-title">Godot build options generator</h1>
+      <p class="note" id="t-version"></p>
+      <p class="intro" id="t-intro"></p>
+      <p class="note" id="t-note"></p>
+
+      <h2 id="t-select"></h2>
+
+      <div class="toolbar">
+        <input type="search" id="search">
+        <button type="button" class="mini" id="reset"></button>
+        <span class="counter" id="counter"></span>
+      </div>
+
+      <div class="options-list" id="list"></div>
+    </div>
+
+    <div class="preview">
+      <h2 id="t-result"></h2>
+      <div class="code-wrap">
+        <div class="code-head">
+          <span>custom.py</span>
+          <span id="lines"></span>
+        </div>
+        <textarea readonly id="output" spellcheck="false"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="download"></button>
+        <button type="button" class="btn btn-ghost" id="copy"></button>
+      </div>
+    </div>
+  </div>
+
+  <footer id="t-footer"></footer>
+</main>
+
+<script>
+"use strict";
+
+/* ---------- Локализация интерфейса ---------- */
+const I18N = {
+  en: {
+    subtitle: "Build configuration generator",
+    title: "Godot build options generator",
+    version: "Last updated for <strong>Godot 4.x</strong> (stable documentation). It may work with other Godot versions, but certain options may not have an effect.",
+    intro: 'This tool generates SCons custom option files to build smaller export templates. After downloading a <code>custom.py</code> file, place it at the root of your Godot source repository and compile export templates with <code>target=template_release</code> for the platforms you need. See <a href="https://docs.godotengine.org/en/stable/engine_details/development/compiling/optimizing_for_size.html">Optimizing a build for size</a> in the Godot documentation for more information.',
+    note: "<strong>Note:</strong> this tool doesn't list modules that are only compiled in editor builds.",
+    select: "Select options and modules",
+    searchPlaceholder: "Search options…",
+    reset: "Reset",
+    result: "Resulting <code>custom.py</code>",
+    download: "Download",
+    copy: "Copy to clipboard",
+    copied: "Copied ✓",
+    counterAll: (n) => `${n} options`,
+    counterFiltered: (a, b) => `showing ${a} of ${b}`,
+    lines: (n) => `${n} line${n === 1 ? "" : "s"}`,
+    tagOption: "option", tagModule: "module",
+    footer: 'Based on <a href="https://github.com/godot-build-options-generator/godot-build-options-generator.github.io">godot-build-options-generator</a> — © 2020–present Hugo Locurcio and contributors.<br>Material Design 3 dark theme — an independent interface implementation.',
+  },
+  ru: {
+    subtitle: "Генератор конфигурации сборки",
+    title: "Генератор опций сборки Godot",
+    version: "Обновлено для <strong>Godot 4.x</strong> (актуальная документация). Может работать и с другими версиями, но некоторые опции могут не действовать.",
+    intro: 'Инструмент генерирует SCons-файл опций для сборки уменьшенных export-шаблонов. Скачайте <code>custom.py</code>, положите его в корень исходников Godot и соберите шаблоны с <code>target=template_release</code> для нужных платформ. Подробнее: <a href="https://docs.godotengine.org/en/stable/engine_details/development/compiling/optimizing_for_size.html">Optimizing a build for size</a>.',
+    note: "<strong>Примечание:</strong> инструмент не перечисляет модули, которые компилируются только в editor-сборках.",
+    select: "Выберите опции и модули",
+    searchPlaceholder: "Поиск по опциям…",
+    reset: "Сбросить",
+    result: "Результат: <code>custom.py</code>",
+    download: "Скачать",
+    copy: "Копировать в буфер",
+    copied: "Скопировано ✓",
+    counterAll: (n) => `${n} опций`,
+    counterFiltered: (a, b) => `показано ${a} из ${b}`,
+    lines: (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? "строка" : [2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100) ? "строки" : "строк"}`,
+    tagOption: "опция", tagModule: "модуль",
+    footer: 'Основано на проекте <a href="https://github.com/godot-build-options-generator/godot-build-options-generator.github.io">godot-build-options-generator</a> — © 2020–present Hugo Locurcio and contributors.<br>Тёмная тема Material Design 3 — независимая реализация интерфейса.',
+  },
+};
+
+/* ---------- Опции (актуально для Godot 4.x) ---------- */
+const OPTIONS = [
+  { id: "extra_suffix", name: ["Extra suffix", "Extra suffix"], notModule: true, text: true, value: "custom_build",
+    desc: ['Changes the "custom_build" suffix. Useful for adding your game title to a build.',
+           'Меняет суффикс «custom_build». Полезно, чтобы добавить название игры в сборку.'] },
+  { id: "production", name: ["Production", "Production"], notModule: true,
+    desc: ["Set defaults to build Godot for use in production.",
+           "Устанавливает значения по умолчанию для production-сборки Godot."] },
+  { id: "disable_3d", name: ["Disable 3D", "Отключить 3D"], notModule: true,
+    desc: ["Disable 3D nodes for a smaller binary (~15% for 2D games).",
+           "Отключает 3D-ноды для уменьшения бинарника (~15% для 2D-игр)."] },
+  { id: "optimize", name: ["Optimize for size", "Оптимизация по размеру"], notModule: true,
+    desc: ["Optimize the compiled binary for size instead of speed.",
+           "Оптимизация бинарника по размеру вместо скорости."],
+    sub: ["Extra: further reduces size with a greater performance cost (Godot 4.5+).",
+          "Дополнительно: ещё сильнее уменьшает размер ценой производительности (Godot 4.5+)."] },
+  { id: "threads", name: ["Enable threading support", "Поддержка потоков"], notModule: true, on: true,
+    desc: ["Disabling this removes SharedArrayBuffer and cross-origin isolation requirements for web exports.",
+           "Отключение убирает SharedArrayBuffer и требования cross-origin isolation для web-экспорта."] },
+  { id: "precision", name: ["Enable double-precision floats", "Числа двойной точности"], notModule: true,
+    desc: ["Increase precision for large-scale worlds. Performance impact; requires GDExtensions compiled for it.",
+           "Повышает точность для крупномасштабных миров. Влияет на производительность; нужны GDExtension, собранные под неё."] },
+  { id: "disable_advanced_gui", name: ["Disable advanced GUI", "Отключить продвинутый GUI"], notModule: true,
+    desc: ["Disable advanced GUI nodes: Tree, TextEdit, RichTextLabel, GraphEdit, FileDialog and more.",
+           "Отключает продвинутые GUI-ноды: Tree, TextEdit, RichTextLabel, GraphEdit, FileDialog и др."] },
+  { id: "deprecated", name: ["Enable deprecated features", "Устаревшие возможности"], notModule: true, on: true,
+    desc: ["Disabling deprecated features can make the binary slightly smaller.",
+           "Отключение устаревших возможностей немного уменьшает бинарник."] },
+  { id: "disable_physics_2d", name: ["Disable 2D physics", "Отключить 2D-физику"], notModule: true,
+    desc: ["Disables the 2D physics engine entirely. Use if your project has no 2D physics.",
+           "Полностью отключает 2D-физический движок. Используйте, если в проекте нет 2D-физики."] },
+  { id: "disable_physics_3d", name: ["Disable 3D physics", "Отключить 3D-физику"], notModule: true,
+    desc: ["Disables the 3D physics engine entirely. Use if your project has no 3D physics.",
+           "Полностью отключает 3D-физический движок. Используйте, если в проекте нет 3D-физики."] },
+  { id: "minizip", name: ["Enable Minizip", "Minizip"], notModule: true, on: true,
+    desc: ["Required to use the ZIPReader and ZIPWriter classes. Also required to run projects that use data packed in a ZIP archive instead of a PCK.",
+           "Нужен для ZIPReader/ZIPWriter и проектов с данными в ZIP вместо PCK."] },
+  { id: "brotli", name: ["Enable Brotli", "Brotli"], notModule: true, on: true,
+    desc: ["Required to use Brotli (de)compression. Also required to use fonts in the WOFF2 format.",
+           "Нужен для (де)компрессии Brotli и шрифтов в формате WOFF2."] },
+  { id: "vulkan", name: ["Enable Vulkan", "Vulkan"], notModule: true, on: true,
+    desc: ["Required to use the Forward+ and Mobile rendering methods with Vulkan.",
+           "Нужен для рендеринга Forward+ и Mobile через Vulkan."] },
+  { id: "opengl3", name: ["Enable OpenGL", "OpenGL"], notModule: true, on: true,
+    desc: ["Required to use the Compatibility rendering method with OpenGL 3.3/OpenGL ES 3.0/WebGL 2.0.",
+           "Нужен для рендеринга Compatibility через OpenGL 3.3 / OpenGL ES 3.0 / WebGL 2.0."] },
+  { id: "d3d12", name: ["Enable Direct3D 12", "Direct3D 12"], notModule: true,
+    desc: ["Required to use Forward+ and Mobile with Direct3D 12 (Windows only). Run misc/scripts/install_d3d12_sdk_windows.py before compiling.",
+           "Нужен для Forward+/Mobile через Direct3D 12 (только Windows). Перед сборкой запустите misc/scripts/install_d3d12_sdk_windows.py."] },
+  { id: "godot_physics_3d", name: ["GodotPhysics 3D", "GodotPhysics 3D"], on: true,
+    desc: ["The default 3D physics engine. Disable only if you use Jolt instead or no 3D physics at all.",
+           "3D-физический движок по умолчанию. Отключайте только если используете Jolt либо вообще без 3D-физики."] },
+  { id: "jolt", name: ["Jolt Physics", "Jolt Physics"],
+    desc: ["Alternative 3D physics engine (faster in CPU-bound scenarios). Keep either GodotPhysics 3D or Jolt enabled.",
+           "Альтернативный 3D-физический движок (быстрее при нагрузке на CPU). Оставляйте включённым либо GodotPhysics 3D, либо Jolt."] },
+  { id: "basis_universal", name: ["Basis Universal", "Basis Universal"], on: true,
+    desc: ["Required to load textures imported as Basis Universal.",
+           "Нужен для загрузки текстур, импортированных как Basis Universal."] },
+  { id: "bmp", name: ["BMP", "BMP"], on: true, desc: ["Required to load BMP images.", "Нужен для загрузки BMP-изображений."] },
+  { id: "camera", name: ["Camera", "Camera"], on: true,
+    desc: ["Required for webcam support (unrelated to the Camera2D/Camera3D nodes).",
+           "Нужен для поддержки веб-камеры (не относится к нодам Camera2D/Camera3D)."] },
+  { id: "csg", name: ["CSG", "CSG"], on: true, desc: ["Required to use Constructive Solid Geometry nodes.", "Нужен для нод Constructive Solid Geometry."] },
+  { id: "dds", name: ["DDS", "DDS"], on: true, desc: ["Required to load DirectDraw Surface images.", "Нужен для загрузки DirectDraw Surface-изображений."] },
+  { id: "enet", name: ["ENet", "ENet"], on: true, desc: ["Required to use NetworkedMultiplayerENet and NetworkedMultiplayerPeer.", "Нужен для NetworkedMultiplayerENet и NetworkedMultiplayerPeer."] },
+  { id: "fbx", name: ["fbx", "fbx"], on: true, desc: ["Required to load non-imported 3D scenes in the FBX format.", "Нужен для загрузки неимпортированных 3D-сцен в формате FBX."] },
+  { id: "freetype", name: ["FreeType", "FreeType"], on: true,
+    desc: ["Required to render DynamicFonts. Bitmap fonts can still be used without FreeType.",
+           "Нужен для рендеринга DynamicFonts. Bitmap-шрифты работают и без него."] },
+  { id: "gdscript", name: ["GDScript", "GDScript"], on: true, desc: ["Required to run scripts written in GDScript.", "Нужен для выполнения скриптов на GDScript."] },
+  { id: "gltf", name: ["GLTF", "GLTF"], on: true, desc: ["Required to load non-imported 3D scenes in the glTF format.", "Нужен для загрузки неимпортированных 3D-сцен в формате glTF."] },
+  { id: "gridmap", name: ["GridMap", "GridMap"], on: true, desc: ["Required to use GridMap nodes.", "Нужен для нод GridMap."] },
+  { id: "hdr", name: ["HDR", "HDR"], on: true, desc: ["Required to load Radiance HDR images.", "Нужен для загрузки изображений Radiance HDR."] },
+  { id: "interactive_music", name: ["Interactive music", "Интерактивная музыка"], on: true,
+    desc: ["Required to use AudioStreamInteractive, AudioStreamPlaylist and AudioStreamSynchronized resources.",
+           "Нужен для AudioStreamInteractive, AudioStreamPlaylist и AudioStreamSynchronized."] },
+  { id: "jpg", name: ["JPG", "JPG"], on: true, desc: ["Required to load JPEG images.", "Нужен для загрузки JPEG-изображений."] },
+  { id: "jsonrpc", name: ["JSON-RPC", "JSON-RPC"], on: true, desc: ["Required to use the JSONRPC class.", "Нужен для класса JSONRPC."] },
+  { id: "ktx", name: ["KTX", "KTX"], on: true, desc: ["Required to load Khronos KTX images.", "Нужен для загрузки изображений Khronos KTX."] },
+  { id: "mbedtls", name: ["mbedTLS", "mbedTLS"], on: true,
+    desc: ["Required to make secure requests with HTTPClient, HTTPRequest and WebSocket classes.",
+           "Нужен для защищённых запросов через HTTPClient, HTTPRequest и WebSocket."] },
+  { id: "meshoptimizer", name: ["meshoptimizer", "meshoptimizer"], on: true,
+    desc: ["Required for optimized SurfaceTool usage, including automatic LOD generation.",
+           "Нужен для оптимизированного SurfaceTool, включая автогенерацию LOD."] },
+  { id: "minimp3", name: ["minimp3", "minimp3"], on: true, desc: ["Required to play back MP3 sounds in AudioStreamPlayer.", "Нужен для воспроизведения MP3 в AudioStreamPlayer."] },
+  { id: "mobile_vr", name: ["Mobile VR", "Mobile VR"], on: true, desc: ["Required to use VR on Android and iOS.", "Нужен для VR на Android и iOS."] },
+  { id: "mono", name: ["Mono (C# / .NET)", "Mono (C# / .NET)"],
+    desc: ["Required to run scripts written in C#. (Godot uses .NET in 4.x, despite the option name mentioning Mono.)",
+           "Нужен для скриптов на C#. (В 4.x используется .NET, несмотря на имя опции.)"] },
+  { id: "msdfgen", name: ["MSDFGen", "MSDFGen"], on: true, desc: ["Required to use Multichannel Signed Distance Fields on fonts.", "Нужен для Multichannel Signed Distance Fields у шрифтов."] },
+  { id: "multiplayer", name: ["Multiplayer", "Multiplayer"], on: true, desc: ["Required to use the multiplayer replication system (RPCs).", "Нужен для системы репликации мультиплеера (RPC)."] },
+  { id: "navigation_2d", name: ["Navigation 2D", "Navigation 2D"], on: true, desc: ["Required to use NavigationServer for 2D.", "Нужен для NavigationServer в 2D."] },
+  { id: "navigation_3d", name: ["Navigation 3D", "Navigation 3D"], on: true, desc: ["Required to use NavigationServer for 3D.", "Нужен для NavigationServer в 3D."] },
+  { id: "noise", name: ["Noise", "Noise"], on: true, desc: ["Required to use Noise, FastNoiseLite and NoiseTextures that rely on it.", "Нужен для Noise, FastNoiseLite и NoiseTexture с ним."] },
+  { id: "ogg", name: ["OGG", "OGG"], on: true, desc: ["Required by vorbis for Ogg Vorbis audio playback. See also stb_vorbis.", "Нужен модулю vorbis для воспроизведения Ogg Vorbis. См. также stb_vorbis."] },
+  { id: "openxr", name: ["OpenXR", "OpenXR"], on: true, desc: ["Required to use virtual reality and augmented reality with OpenXR.", "Нужен для VR/AR через OpenXR."] },
+  { id: "raycast", name: ["Raycast", "Raycast"], on: true,
+    desc: ["Required to use occlusion culling. (Disabled by default in web exports to reduce binary size.)",
+           "Нужен для окклюзионного кулинга. (В web-экспорте по умолчанию отключён ради размера.)"] },
+  { id: "regex", name: ["RegEx", "RegEx"], on: true, desc: ["Required to parse regular expressions with the RegEx class.", "Нужен для регулярных выражений через класс RegEx."] },
+  { id: "squish", name: ["Squish", "Squish"], on: true, desc: ["Required to decompress images compressed with Squish (including S3TC VRAM compression).", "Нужен для декомпрессии изображений, сжатых Squish (включая S3TC)."] },
+  { id: "svg", name: ["SVG", "SVG"], on: true, desc: ["Required to load non-imported SVG images.", "Нужен для загрузки неимпортированных SVG-изображений."] },
+  { id: "text_server_adv", name: ["Text Server Advanced", "Text Server Advanced"], on: true,
+    desc: ["Required to use TextServerAdvanced, the default TextServer. Supports right-to-left typesetting and complex scripts.",
+           "Нужен для TextServerAdvanced — TextServer по умолчанию. Поддерживает RTL и сложные письменности."] },
+  { id: "text_server_fb", name: ["Text Server Fallback", "Text Server Fallback"],
+    desc: ["Required for TextServerFallback. No RTL or complex scripts. Enable this if disabling Text Server Advanced; otherwise, no text will be displayed.",
+           "Нужен для TextServerFallback. Без поддержки RTL и сложных письменностей. Включайте, если выключили Advanced, — иначе текст не отобразится."] },
+  { id: "tga", name: ["TGA", "TGA"], on: true, desc: ["Required to load TrueVision Targa images.", "Нужен для загрузки изображений TrueVision Targa."] },
+  { id: "theora", name: ["Theora", "Theora"], on: true, desc: ["Required to play back Ogg Theora videos in VideoStreamPlayer/VideoPlayer.", "Нужен для воспроизведения Ogg Theora в VideoStreamPlayer/VideoPlayer."] },
+  { id: "upnp", name: ["UPnP", "UPnP"], on: true, desc: ["Required to use the UPNP classes for network discovery and automatic port forwarding.", "Нужен для классов UPnP: обнаружение устройств и автопроброс портов."] },
+  { id: "vhacd", name: ["V-HACD", "V-HACD"], on: true, desc: ["Required to create convex collision shapes in Mesh at runtime. (Not required if convex shapes were created on import.)", "Нужен для создания выпуклых коллизий в Mesh во время выполнения. (Не нужен, если формы созданы при импорте.)"] },
+  { id: "vorbis", name: ["Vorbis", "Vorbis"], on: true, desc: ["Required to play back Ogg Vorbis sounds in AudioStreamPlayer. See also ogg.", "Нужен для воспроизведения Ogg Vorbis в AudioStreamPlayer. См. также ogg."] },
+  { id: "webrtc", name: ["WebRTC", "WebRTC"], on: true, desc: ["Required to use WebRTC connections.", "Нужен для соединений WebRTC."] },
+  { id: "websocket", name: ["WebSocket", "WebSocket"], on: true, desc: ["Required to use WebSocket connections.", "Нужен для соединений WebSocket."] },
+  { id: "webxr", name: ["WebXR", "WebXR"], on: true, desc: ["Required to run AR/VR on browsers.", "Нужен для AR/VR в браузерах."] },
+  { id: "zip", name: ["ZIP", "ZIP"], on: true, desc: ["Required to use the ZIPReader and ZIPPacker classes (also requires Minizip to be enabled).", "Нужен для классов ZIPReader и ZIPPacker (также требует Minizip)."] },
+  { id: "custom_modules", name: ["Custom modules path", "Путь к пользовательским модулям"], notModule: true, text: true, value: "",
+    desc: ["Specifies a path to a folder containing custom C++ modules to build.",
+           "Путь к папке с пользовательскими C++-модулями для сборки."] },
+];
+
+/* ---------- Состояние ---------- */
+const opts = OPTIONS.map(o => ({
+  id: o.id, notModule: !!o.notModule, text: !!o.text, sub: o.sub || null,
+  name: o.name, desc: o.desc,
+  enabled: o.on ?? false,
+  def: o.on ?? false,
+  value: o.value ?? null,
+  subOn: false,
+}));
+
+let lang = localStorage.getItem("lang") ||
+  (navigator.language && navigator.language.toLowerCase().startsWith("ru") ? "ru" : "en");
+
+const $ = (id) => document.getElementById(id);
+const list = $("list"), output = $("output"), search = $("search"),
+      counter = $("counter"), linesEl = $("lines");
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/* ---------- Применение языка ---------- */
+function applyLang() {
+  const t = I18N[lang];
+  document.documentElement.lang = lang;
+  $("t-subtitle").textContent = t.subtitle;
+  $("t-title").textContent = t.title;
+  $("t-version").innerHTML = t.version;
+  $("t-intro").innerHTML = t.intro;
+  $("t-note").innerHTML = t.note;
+  $("t-select").textContent = t.select;
+  $("t-result").innerHTML = t.result;
+  $("t-footer").innerHTML = t.footer;
+  $("reset").textContent = t.reset;
+  $("download").textContent = t.download;
+  $("copy").textContent = t.copy;
+  search.placeholder = t.searchPlaceholder;
+  for (const b of document.querySelectorAll("#lang-switch button"))
+    b.classList.toggle("active", b.dataset.lang === lang);
+  document.title = lang === "ru" ? "Генератор опций сборки Godot" : "Godot build options generator";
+  render(); generate();
+}
+
+/* ---------- Список опций ---------- */
+function render() {
+  const t = I18N[lang];
+  const q = search.value.trim().toLowerCase();
+  list.innerHTML = "";
+  let shown = 0;
+  for (const o of opts) {
+    const name = o.name[lang === "ru" ? 1 : 0];
+    const desc = o.desc[lang === "ru" ? 1 : 0];
+    const hay = (name + " " + o.id + " " + desc).toLowerCase();
+    if (q && !hay.includes(q)) continue;
+    shown++;
+    const el = document.createElement("div");
+    el.className = "opt" + (o.enabled ? " on" : "");
+    el.innerHTML = `
+      <div class="toggle"></div>
+      <div class="opt-body">
+        <div class="opt-name">${escapeHtml(name)}<span class="tag">${o.notModule ? t.tagOption : t.tagModule}</span></div>
+        <div class="opt-desc">${escapeHtml(desc)}</div>
+        ${(o.text || o.sub) ? `<div class="opt-extra" ${o.enabled ? "" : 'style="display:none"'}>
+          ${o.text ? `<input type="text" data-role="text" value="${escapeHtml(o.value ?? "")}">` : ""}
+          ${o.sub ? `<label class="subopt"><input type="checkbox" data-role="sub" ${o.subOn ? "checked" : ""}> ${escapeHtml(o.sub[lang === "ru" ? 1 : 0])}</label>` : ""}
+        </div>` : ""}
+      </div>`;
+    if (o.text) {
+      const ti = el.querySelector('[data-role="text"]');
+      ti.addEventListener("input", () => { o.value = ti.value; generate(); });
+    }
+    if (o.sub) {
+      const sc = el.querySelector('[data-role="sub"]');
+      sc.addEventListener("click", ev => ev.stopPropagation());
+      sc.addEventListener("change", () => { o.subOn = sc.checked; generate(); });
+    }
+    el.addEventListener("click", () => {
+      o.enabled = !o.enabled;
+      el.classList.toggle("on", o.enabled);
+      const extra = el.querySelector(".opt-extra");
+      if (extra) extra.style.display = o.enabled ? "" : "none";
+      generate();
+    });
+    list.appendChild(el);
+  }
+  counter.textContent = q ? t.counterFiltered(shown, opts.length) : t.counterAll(opts.length);
+}
+
+/* ---------- Генерация custom.py ---------- */
+function generate() {
+  const t = I18N[lang];
+  let out = "# Generated using https://godot-build-options-generator.github.io\n\n";
+  let n = 2;
+  for (const o of opts) {
+    if (o.text) {
+      if (o.enabled && o.value !== o.def) { out += `${o.id} = "${o.value}"\n`; n++; }
+      continue;
+    }
+    if (o.enabled === o.def) continue;
+    if (o.notModule) {
+      let v = o.enabled ? "yes" : "no";
+      if (o.id === "optimize") v = o.enabled ? (o.subOn ? "size_extra" : "size") : "speed";
+      else if (o.id === "precision") v = o.enabled ? "double" : "single";
+      out += `${o.id} = "${v}"\n`;
+    } else {
+      out += `module_${o.id}_enabled = "${o.enabled ? "yes" : "no"}"\n`;
+    }
+    n++;
+  }
+  output.value = out;
+  linesEl.textContent = t.lines(n);
+}
+
+/* ---------- События ---------- */
+search.addEventListener("input", render);
+document.querySelectorAll("#lang-switch button").forEach(b =>
+  b.addEventListener("click", () => {
+    lang = b.dataset.lang;
+    localStorage.setItem("lang", lang);
+    applyLang();
+  }));
+$("reset").addEventListener("click", () => {
+  for (const o of opts) {
+    const src = OPTIONS.find(x => x.id === o.id);
+    o.enabled = o.def;
+    o.value = src.value ?? null;
+    o.subOn = false;
+  }
+  render(); generate();
+});
+$("download").addEventListener("click", () => {
+  const blob = new Blob([output.value], { type: "text/plain" });
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(blob), download: "custom.py",
+  });
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(a.href);
+});
+$("copy").addEventListener("click", async (e) => {
+  await navigator.clipboard.writeText(output.value);
+  const b = e.currentTarget;
+  b.textContent = I18N[lang].copied;
+  setTimeout(() => (b.textContent = I18N[lang].copy), 1500);
+});
+
+/* ---------- Material ripple ---------- */
+document.addEventListener("pointerdown", (e) => {
+  const el = e.target.closest(".btn, .opt, .mini, .lang-switch button");
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  const d = Math.max(r.width, r.height) * 2;
+  const rip = document.createElement("span");
+  rip.className = "ripple";
+  rip.style.width = rip.style.height = d + "px";
+  rip.style.left = (e.clientX - r.left - d / 2) + "px";
+  rip.style.top = (e.clientY - r.top - d / 2) + "px";
+  el.appendChild(rip);
+  setTimeout(() => rip.remove(), 600);
+});
+
+applyLang();
+</script>
+</body>
+</html>
